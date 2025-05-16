@@ -1,0 +1,93 @@
+import random
+
+# Data: matriks jarak antar kota (5 kota: A, B, C, D, E)
+distance_matrix = [
+    [0, 2, 9, 10, 7],
+    [1, 0, 6, 4, 3],
+    [15, 7, 0, 8, 3],
+    [6, 3, 12, 0, 11],
+    [9, 5, 2, 6, 0]
+]
+
+cities = [0, 1, 2, 3, 4]  # Representasi kota: 0 = A, 1 = B, ...
+
+# Parameter GA
+POP_SIZE = 50
+GENS = 200
+MUTATION_RATE = 0.1
+TOURNAMENT_SIZE = 5
+
+# Hitung total jarak rute
+def route_distance(route):
+    distance = 0
+    for i in range(len(route)):
+        from_city = route[i]
+        to_city = route[(i + 1) % len(route)]  # kembali ke kota awal
+        distance += distance_matrix[from_city][to_city]
+    return distance
+
+# Fitness = 1 / total_jarak
+def fitness(route):
+    return 1 / route_distance(route)
+
+# Inisialisasi populasi acak
+def init_population():
+    return [random.sample(cities, len(cities)) for _ in range(POP_SIZE)]
+
+# Seleksi: tournament
+def selection(population):
+    tournament = random.sample(population, TOURNAMENT_SIZE)
+    return max(tournament, key=fitness)
+
+# Order Crossover (OX)
+def crossover(parent1, parent2):
+    start, end = sorted(random.sample(range(len(parent1)), 2))
+    child = [None] * len(parent1)
+    child[start:end] = parent1[start:end]
+    fill = [city for city in parent2 if city not in child]
+    
+    pointer = 0
+    for i in range(len(child)):
+        if child[i] is None:
+            child[i] = fill[pointer]
+            pointer += 1
+    return child
+
+# Mutasi: swap dua kota
+def mutate(route):
+    if random.random() < MUTATION_RATE:
+        i, j = random.sample(range(len(route)), 2)
+        route[i], route[j] = route[j], route[i]
+    return route
+
+# Proses GA utama
+def genetic_algorithm():
+    population = init_population()
+    best = min(population, key=route_distance)
+    
+    for gen in range(GENS):
+        new_population = []
+        for _ in range(POP_SIZE):
+            parent1 = selection(population)
+            parent2 = selection(population)
+            child = crossover(parent1, parent2)
+            child = mutate(child)
+            new_population.append(child)
+        population = new_population
+
+        current_best = min(population, key=route_distance)
+        if route_distance(current_best) < route_distance(best):
+            best = current_best
+
+    return best, route_distance(best)
+
+# Jalankan algoritma
+best_route, best_dist = genetic_algorithm()
+
+# Tampilkan hasil
+city_names = ['A', 'B', 'C', 'D', 'E']
+named_route = [city_names[i] for i in best_route]
+named_route.append(named_route[0])  # kembali ke awal
+
+print("Rute terbaik:", " -> ".join(named_route))
+print("Total jarak:", best_dist)
